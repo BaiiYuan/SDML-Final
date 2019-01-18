@@ -18,6 +18,8 @@ from sklearn.model_selection import train_test_split
 
 device = "cuda" if torch.cuda.is_available else "cpu"
 
+Draw = []
+
 class main():
     def __init__(self, args):
         # args
@@ -83,6 +85,22 @@ class main():
         print("There are {} training data.".format(self.train_num_data))
         print("There are {} validation data.".format(self.valid_num_data))
 
+        Trans = []
+        while len(Trans) < 64:
+            a, b = np.random.uniform(low=-100, high=100, size=(3,)), np.random.uniform(low=-100, high=100, size=(3,))
+            while np.linalg.norm(a) < 0.1  :
+                a = np.random.uniform(low=-100, high=100, size=(3,))
+            while np.linalg.norm(b) < 0.1  :
+                b = np.random.uniform(low=-100, high=100, size=(3,))
+            c = np.cross(a, b)
+            b = np.cross(a, c)
+
+            a = (a/np.linalg.norm(a)).reshape(-1, 1)
+            b = (b/np.linalg.norm(b)).reshape(-1, 1)
+            c = (c/np.linalg.norm(c)).reshape(-1, 1)
+            trans = np.concatenate((a, b, c), axis=1)
+            Trans.append(trans)
+        self.Trans = Trans
 
 
     
@@ -111,7 +129,7 @@ class main():
     def create_model(self):
         print("Create model.")
         # self.model = models.RNNbase()
-        self.model = models.RNNatt(input_size=39)
+        self.model = models.Nonlocalbase(input_size=39)
         print(self.model)
         self.model.to(device)
 
@@ -121,12 +139,32 @@ class main():
         self.optim = optim.Adam(self.model.parameters(), lr=self.lr, betas=(0.9, 0.999), weight_decay=1e-3)
         self.objective = nn.NLLLoss()
 
+
+    def random_rotate(self, x):
+        trans = random.sample(self.Trans, 1)[0]
+
+        xg = x[:, :, :3]
+        xa = x[:, :, 3:6]
+        xm = x[:, :, 6:]
+
+        n_xg = np.dot(xg, trans)
+        n_xa = np.dot(xa, trans)
+        n_xm = np.dot(xm, trans)
+
+        out = np.concatenate((n_xg, n_xa, n_xm), axis=2)
+        return out
+
+    def x_y_z_rotate(self, x):
+        rd = random.sample(range(3), 3)
+        new = rd+([i+3 for i in rd])+([i+6 for i in rd])
+        return x[:, :, new]
+
     def Add_feature(self, input_data, axis_aug=False): # input_data.shape: ( N, 130, 9 )
         x = np.array(input_data)
         if axis_aug:
-            rd = random.sample(range(3), 3)
-            new = rd+([i+3 for i in rd])+([i+6 for i in rd])
-            x = x[:, :, new]
+            # x = self.x_y_z_rotate(x)
+            x = self.random_rotate(x)
+        
 
         bs = x.shape[0]
         x0 = x[:, :-2]
@@ -158,6 +196,8 @@ class main():
         # return x0
 
     def data_generator(self, data, batch_size, axis_aug=False, shuffle=True):
+        # print(axis_aug)
+
         if shuffle:
             used_data = random.sample(data, len(data))
         else:
@@ -200,14 +240,16 @@ class main():
             val_acc.extend(acc)
             val_loss.append(loss)
 
-        print(val_len)
+        # print(val_len)
         print("val_acc {:.2f}%".format(np.mean(val_acc)*100))
+        """
         for c in range(5):
             label_arr = np.array(label_list)
             pred_arr = np.array(pred_list)
             c_loc = np.nonzero(label_arr == c) 
             val_c_acc.append(np.mean(np.equal(pred_arr[c_loc], c)))
             print("val_type {} acc {:.2f}%".format(c, val_c_acc[-1]*100))
+        """
 
         return np.mean(val_acc)
 
@@ -243,13 +285,19 @@ class main():
 
             Iter = 100.0 * (idx + 1) / steps
             stdout.write("\rEpoch: {}/{}, Iter: {:.1f}%, Loss: {:.4f}, Acc: {:.4f}".format(epoch, self.epochs, Iter, np.mean(epoch_loss), np.mean(epoch_acc)))
+            """
             if (idx + 1) % self.print_iter == 0 :
                 print(" ")
+            """
 
         print(" Spends {:.2f} seconds.".format(time.time() - t1))
         print("The Training dataset Accuracy is {:.2f}%, Loss is {:.4f}".format(np.mean(epoch_acc)*100, np.mean(epoch_loss)))
 
-        acc_valid = self.validation_acc()
+        D_tr = np.mean(epoch_acc)
+        D_va = self.validation_acc()
+        D_te = self.test()
+
+        acc_valid = D_va
 
         self.loss_epoch_tr.append(np.mean(epoch_loss))
         self.acc_epoch_tr.append(np.mean(epoch_acc))
@@ -261,6 +309,7 @@ class main():
 
         self.acc_epoch_va.append(acc_valid)
         # self.loss_epoch_va.append(loss_valid)
+        Draw.append((D_tr, D_va, D_te))
 
     def save_model(self):
         torch.save({
@@ -280,13 +329,18 @@ class main():
 
     def trainIter(self):
         self.trainInit()
+        self.load_testdata()
         for epoch in range(self.epochs):
             self.train(epoch + 1)
 
-    def test(self, args):
+    def testInit(self, args):
         self.load_testdata()
         self.create_model()
         self.loadchkpt(args.model_dump)
+        self.test()
+
+
+    def test(self):
         test_gen = self.data_generator(self.test_data, self.batch_size, shuffle=False)  #generate test data
         self.model.eval()
 
@@ -309,7 +363,7 @@ class main():
             c_loc = np.nonzero(label_arr == c) 
             test_c_acc.append(np.mean(np.equal(pred_arr[c_loc], c)))
             print("test_type {} acc {:.2f}%".format(c, test_c_acc[-1]*100))
-        return np.mean(test_acc), test_c_acc
+        return np.mean(test_acc)#, test_c_acc
 
     def test_by_file(self, data_by_file):
         print("------------------{}-------------------".format("Test By Each File "))
@@ -342,7 +396,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-dp', '--data_path', type=str, default='./data')
-    parser.add_argument('-e', '--epochs', type=int, default=30)
+    parser.add_argument('-e', '--epochs', type=int, default=500)
     parser.add_argument('-b', '--batch_size', type=int, default=64)
     parser.add_argument('-lr', '--lr_rate', type=float, default=1e-4)
     parser.add_argument('-md', '--model_dump', type=str, default='./chkpt/model.tar')
@@ -356,7 +410,9 @@ if __name__ == "__main__":
     final = main(args)
     if args.train:
         final.trainIter()
-    test_acc, test_c_att = final.test(args)
+    np.save("Draw.npy", Draw)
+    final.testInit(args)
+
     sys.exit()
 
 
