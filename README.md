@@ -35,3 +35,25 @@ python3 main.py -dp ./win128shi128 -md ./model_1.tar -e 20 -lr 1e-4
 python3 main.py -dp ../data/win128shi128 -md ./model_1.tar -tr 0
 ```
 
+
+
+### Non-Local
+
+As following:
+
+```bash
+cd Non_Local
+## Train and test
+python3 main.py -dp ./win128shi128 -md ./model_1.tar -e 20 -lr 1e-4
+## Test
+python3 main.py -dp ../data/win128shi128 -md ./model_1.tar -tr 0
+```
+
+
+
+### Xgboost
+
+```bash
+cd XGboost
+```
+
