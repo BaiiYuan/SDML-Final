@@ -6,6 +6,10 @@ Code for the Final project
 
 ![5_layer_dir](./preprocess/5_layer_dir.png)
 
+*(The first line is vldb_transport/data_raw_training/5_Car/Unknown/新增資料夾, which is empty. Please REMOVE it.)*
+
+
+
 For the above files, which have five layers, please move them to the upper folder. Let all the files is under the four-layer-structutre.
 
 First, move the folder `vldb_transport` into `preprocess`
