@@ -1,2 +1,33 @@
 # SDML Final project - ReadMe
 
+Code for the Final project
+
+### Preprocessing
+
+![5_layer_dir](./preprocess/5_layer_dir.png)
+
+For the above files, which have five layers, please move them to the upper folder. Let all the files is under the four-layer-structutre.
+
+First, move the folder `vldb_transport` into `preprocess`
+
+```bash
+cd preprocess
+python3 data_preprocess.py
+mkdir win128shi128
+python3 data_more_process.py ./modify_vldb_transport ./win128shi128
+```
+
+
+
+### Attn-RNN
+
+As following: 
+
+```bash
+cd Self_Attn
+## Train and test
+python3 main.py -dp ./win128shi128 -md ./model_1.tar -e 20 -lr 1e-4
+## Test
+python3 main.py -dp ../data/win128shi128 -md ./model_1.tar -tr 0
+```
+
