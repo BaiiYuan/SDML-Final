@@ -32,7 +32,7 @@ cd Self_Attn
 ## Train and test
 python3 main.py -dp ./win128shi128 -md ./model_1.tar -e 20 -lr 1e-4
 ## Test
-python3 main.py -dp ../data/win128shi128 -md ./model_1.tar -tr 0
+python3 main.py -dp ./win128shi128 -md ./model_1.tar -tr 0
 ```
 
 
@@ -46,14 +46,18 @@ cd Non_Local
 ## Train and test
 python3 main.py -dp ./win128shi128 -md ./model_1.tar -e 20 -lr 1e-4
 ## Test
-python3 main.py -dp ../data/win128shi128 -md ./model_1.tar -tr 0
+python3 main.py -dp ./win128shi128 -md ./model_1.tar -tr 0
 ```
 
 
 
 ### Xgboost
 
+As following:
+
 ```bash
 cd XGboost
+## Train and test
+python3 main_xgboost.py -dp ./win128shi128 -md ./model_1.tar
 ```
 
